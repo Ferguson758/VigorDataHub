@@ -1,0 +1,97 @@
+body {
+  font-family: Arial, sans-serif;
+  background: url("IMG-20250208-WA0029.jpg") no-repeat center center fixed;
+  background-size: cover;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+/* Blurred background overlay */
+body::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.4); /* Dark overlay */
+  backdrop-filter: blur(5px); /* Blur effect */
+  z-index: 0;
+}
+
+.container {
+  width: 80%;
+  max-width: 400px;
+  padding: 20px;
+  background-color: rgba(255, 255, 255, 0.95); /* Less transparency */
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  position: relative;
+  z-index: 1; /* Ensures it's on top of the blur */
+}
+
+h1 {
+  color: #333;
+}
+
+fieldset {
+  border: none;
+  padding: 10px;
+  margin-top: 10px;
+}
+
+legend {
+  font-size: 1.2em;
+  font-weight: bold;
+}
+
+label {
+  font-size: 1em;
+  color: #555;
+}
+
+input[type="email"], input[type="password"], input[type="text"] {
+  width: 100%;
+  padding: 10px;
+  margin: 10px 0;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 1em;
+}
+
+button {
+  padding: 10px 20px;
+  background-color: #28a745;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1em;
+  width: 100%;
+}
+
+button:hover {
+  background-color: #218838;
+}
+
+p {
+  text-align: center;
+  font-size: 0.9em;
+}
+
+a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+  .container {
+    width: 90%;
+  }
+}
