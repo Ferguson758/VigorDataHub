@@ -13,7 +13,18 @@ const cors = require('cors');
 
 const app = express();
 app.use(express.json());
-app.use(cors());
+
+// ✅ **CORS Configuration** (Allow Frontend Requests)
+const allowedOrigins = [
+    "https://vigor-data-hub.vercel.app",  // ✅ Replace with your actual frontend URL
+    "http://localhost:5000"  // ✅ Allow local development (Remove this when deploying)
+];
+
+app.use(cors({
+    origin: allowedOrigins,
+    methods: "GET,POST,PUT,DELETE",
+    allowedHeaders: "Content-Type,Authorization"
+}));
 
 // ✅ Serve Static Files (HTML, CSS, JS)
 app.use(express.static(path.join(__dirname, 'public')));
@@ -52,65 +63,9 @@ const transporter = nodemailer.createTransport({
     },
 });
 
-// ✅ Serve the Homepage
+// ✅ **Fix for Render: Serve `index.html`**
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// ✅ Route: List All Available Routes
-app.get('/routes', (req, res) => {
-    const routes = app._router.stack
-        .filter(r => r.route)
-        .map(r => r.route.path);
-    res.json({ available_routes: routes });
-});
-
-// ✅ Route: Send Authentication Code
-app.post('/send-auth-code', async (req, res) => {
-    try {
-        const { email } = req.body;
-        if (!email) return res.status(400).json({ message: 'Email is required' });
-
-        const authCode = crypto.randomInt(100000, 999999).toString();
-        const expiry = moment().add(15, 'minutes').toDate();
-
-        await User.findOneAndUpdate({ email }, { authCode, authCodeExpiry: expiry }, { upsert: true });
-
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: email,
-            subject: 'Your Authentication Code',
-            text: `Your authentication code is: ${authCode}. It expires in 15 minutes.`,
-        };
-
-        transporter.sendMail(mailOptions, (error) => {
-            if (error) return res.status(500).json({ message: 'Error sending email' });
-
-            res.status(200).json({ message: 'Auth code sent' });
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
-});
-
-// ✅ Route: Verify Authentication Code
-app.post('/verify-auth-code', async (req, res) => {
-    try {
-        const { email, authCode } = req.body;
-        if (!email || !authCode) return res.status(400).json({ message: 'Email and Auth Code are required' });
-
-        const user = await User.findOne({ email });
-
-        if (!user || user.authCode !== authCode || new Date() > user.authCodeExpiry) {
-            return res.status(400).json({ message: 'Invalid or expired code' });
-        }
-
-        res.status(200).json({ message: 'Code verified, proceed to set password' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
 });
 
 // ✅ Route: Signup
@@ -153,23 +108,6 @@ app.post('/login', async (req, res) => {
     }
 });
 
-// ✅ Protected Route: Dashboard
-app.get('/dashboard', (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ message: 'Unauthorized' });
-    }
-
-    const token = authHeader.split(' ')[1];
-
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        res.json({ message: `Welcome, ${decoded.email}! This is a protected dashboard.` });
-    } catch (error) {
-        res.status(401).json({ message: 'Invalid or expired token' });
-    }
-});
-
 // ✅ 404 Handler (For Invalid Routes)
 app.use((req, res) => {
     res.status(404).json({ message: 'Route not found' });
@@ -180,3 +118,4 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
