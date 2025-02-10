@@ -16,8 +16,10 @@ app.use(express.json());
 
 // ✅ **CORS Configuration** (Allow Frontend Requests)
 const allowedOrigins = [
-    "https://vigor-data-hub.vercel.app",  // ✅ Replace with your actual frontend URL
-    "http://localhost:5000"  // ✅ Allow local development (Remove this when deploying)
+    "https://vigor-data-hub.vercel.app",
+    "https://vigor-data-hub-bay.vercel.app",
+    "https://vigordatahub.onrender.com",
+    "http://localhost:5000"
 ];
 
 app.use(cors({
@@ -26,7 +28,7 @@ app.use(cors({
     allowedHeaders: "Content-Type,Authorization"
 }));
 
-// ✅ Serve Static Files (HTML, CSS, JS)
+// ✅ Serve Static Files
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ✅ Ensure Required Environment Variables Exist
@@ -63,12 +65,12 @@ const transporter = nodemailer.createTransport({
     },
 });
 
-// ✅ **Fix for Render: Serve `index.html`**
+// ✅ Serve the Homepage
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// ✅ Route: Signup
+// ✅ **Signup Route (Now Sends Verification Code)**
 app.post('/signup', async (req, res) => {
     try {
         const { email, password, fullName } = req.body;
@@ -78,37 +80,51 @@ app.post('/signup', async (req, res) => {
         if (existingUser) return res.status(400).json({ message: 'Email already registered' });
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = new User({ email, password: hashedPassword, fullName });
+        const authCode = crypto.randomInt(100000, 999999).toString();
+        const expiry = moment().add(15, 'minutes').toDate();
+
+        const newUser = new User({ email, password: hashedPassword, fullName, authCode, authCodeExpiry: expiry });
         await newUser.save();
 
-        res.status(201).json({ message: 'Account created successfully!' });
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: 'Your Verification Code',
+            text: `Your verification code is: ${authCode}. It expires in 15 minutes.`,
+        };
+
+        transporter.sendMail(mailOptions, (error) => {
+            if (error) return res.status(500).json({ message: 'Error sending verification code' });
+            res.status(201).json({ message: 'Account created successfully! Check your email for the verification code.' });
+        });
+
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
 
-// ✅ Route: Login
+// ✅ **Login Route (Now Redirects Correctly)**
 app.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
         if (!email || !password) return res.status(400).json({ message: 'Email and Password are required' });
 
         const user = await User.findOne({ email });
-
         if (!user || !(await bcrypt.compare(password, user.password))) {
             return res.status(400).json({ message: 'Invalid email or password' });
         }
 
         const token = jwt.sign({ email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
-        res.status(200).json({ message: 'Login successful', token });
+
+        res.status(200).json({ message: 'Login successful', token, redirectUrl: "dashboard.html" });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
 
-// ✅ 404 Handler (For Invalid Routes)
+// ✅ 404 Handler
 app.use((req, res) => {
     res.status(404).json({ message: 'Route not found' });
 });
@@ -118,4 +134,3 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
-
