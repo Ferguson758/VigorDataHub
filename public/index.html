@@ -5,6 +5,7 @@
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     const loginForm = document.getElementById("login-form");
+    
     if (loginForm) {
       loginForm.addEventListener("submit", async function (event) {
         event.preventDefault();
@@ -23,13 +24,15 @@
           alert(data.message);
 
           if (response.ok) {
-            window.location.href = "dashboard.html"; // Redirect to dashboard
+            window.location.href = data.redirectUrl; // Redirect to dashboard.html
           }
         } catch (error) {
           console.error("Error:", error);
           alert("Login failed. Please try again.");
         }
       });
+    } else {
+      console.error("Error: Login form not found.");
     }
   });
 </script>

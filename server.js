@@ -13,9 +13,22 @@ const cors = require('cors');
 
 const app = express();
 app.use(express.json());
-app.use(cors());
 
-// ✅ Serve Static Files (HTML, CSS, JS)
+// ✅ **CORS Configuration** (Allow Frontend Requests)
+const allowedOrigins = [
+    "https://vigor-data-hub.vercel.app",
+    "https://vigor-data-hub-bay.vercel.app",
+    "https://vigordatahub.onrender.com",
+    "http://localhost:5000"
+];
+
+app.use(cors({
+    origin: allowedOrigins,
+    methods: "GET,POST,PUT,DELETE",
+    allowedHeaders: "Content-Type,Authorization"
+}));
+
+// ✅ Serve Static Files
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ✅ Ensure Required Environment Variables Exist
@@ -57,63 +70,7 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// ✅ Route: List All Available Routes
-app.get('/routes', (req, res) => {
-    const routes = app._router.stack
-        .filter(r => r.route)
-        .map(r => r.route.path);
-    res.json({ available_routes: routes });
-});
-
-// ✅ Route: Send Authentication Code
-app.post('/send-auth-code', async (req, res) => {
-    try {
-        const { email } = req.body;
-        if (!email) return res.status(400).json({ message: 'Email is required' });
-
-        const authCode = crypto.randomInt(100000, 999999).toString();
-        const expiry = moment().add(15, 'minutes').toDate();
-
-        await User.findOneAndUpdate({ email }, { authCode, authCodeExpiry: expiry }, { upsert: true });
-
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: email,
-            subject: 'Your Authentication Code',
-            text: `Your authentication code is: ${authCode}. It expires in 15 minutes.`,
-        };
-
-        transporter.sendMail(mailOptions, (error) => {
-            if (error) return res.status(500).json({ message: 'Error sending email' });
-
-            res.status(200).json({ message: 'Auth code sent' });
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
-});
-
-// ✅ Route: Verify Authentication Code
-app.post('/verify-auth-code', async (req, res) => {
-    try {
-        const { email, authCode } = req.body;
-        if (!email || !authCode) return res.status(400).json({ message: 'Email and Auth Code are required' });
-
-        const user = await User.findOne({ email });
-
-        if (!user || user.authCode !== authCode || new Date() > user.authCodeExpiry) {
-            return res.status(400).json({ message: 'Invalid or expired code' });
-        }
-
-        res.status(200).json({ message: 'Code verified, proceed to set password' });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
-});
-
-// ✅ Route: Signup
+// ✅ **Signup Route (Now Sends Verification Code)**
 app.post('/signup', async (req, res) => {
     try {
         const { email, password, fullName } = req.body;
@@ -123,54 +80,51 @@ app.post('/signup', async (req, res) => {
         if (existingUser) return res.status(400).json({ message: 'Email already registered' });
 
         const hashedPassword = await bcrypt.hash(password, 10);
-        const newUser = new User({ email, password: hashedPassword, fullName });
+        const authCode = crypto.randomInt(100000, 999999).toString();
+        const expiry = moment().add(15, 'minutes').toDate();
+
+        const newUser = new User({ email, password: hashedPassword, fullName, authCode, authCodeExpiry: expiry });
         await newUser.save();
 
-        res.status(201).json({ message: 'Account created successfully!' });
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: 'Your Verification Code',
+            text: `Your verification code is: ${authCode}. It expires in 15 minutes.`,
+        };
+
+        transporter.sendMail(mailOptions, (error) => {
+            if (error) return res.status(500).json({ message: 'Error sending verification code' });
+            res.status(201).json({ message: 'Account created successfully! Check your email for the verification code.' });
+        });
+
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
 
-// ✅ Route: Login
+// ✅ **Login Route (Now Redirects Correctly)**
 app.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
         if (!email || !password) return res.status(400).json({ message: 'Email and Password are required' });
 
         const user = await User.findOne({ email });
-
         if (!user || !(await bcrypt.compare(password, user.password))) {
             return res.status(400).json({ message: 'Invalid email or password' });
         }
 
         const token = jwt.sign({ email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
-        res.status(200).json({ message: 'Login successful', token });
+
+        res.status(200).json({ message: 'Login successful', token, redirectUrl: "dashboard.html" });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
 
-// ✅ Protected Route: Dashboard
-app.get('/dashboard', (req, res) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return res.status(401).json({ message: 'Unauthorized' });
-    }
-
-    const token = authHeader.split(' ')[1];
-
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        res.json({ message: `Welcome, ${decoded.email}! This is a protected dashboard.` });
-    } catch (error) {
-        res.status(401).json({ message: 'Invalid or expired token' });
-    }
-});
-
-// ✅ 404 Handler (For Invalid Routes)
+// ✅ 404 Handler
 app.use((req, res) => {
     res.status(404).json({ message: 'Route not found' });
 });
