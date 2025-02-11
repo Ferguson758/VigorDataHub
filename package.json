@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "scripts": {
     "start": "node server.js",
-    "build": "next build'"
+    "vercel-build": "echo 'next build'"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
