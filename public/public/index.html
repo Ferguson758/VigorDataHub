@@ -1,12 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vigor Data Hub - Login</title>
+  <link rel="stylesheet" href="styles.css">
   <link rel="icon" type="image/x-icon" href="favicon.ico">
-</head>
+  <style>
+    body {
+      background: url('IMG-20250208-WA0029.jpg') no-repeat center center fixed;
+      background-size: cover;
+      font-family: Arial, sans-serif;
+      color: white;
+      text-align: center;
+    }
 
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const loginForm = document.getElementById("login-form");
-    
-    if (loginForm) {
+    .container {
+      background: rgba(0, 0, 0, 0.7);
+      padding: 20px;
+      width: 300px;
+      margin: 100px auto;
+      border-radius: 10px;
+    }
+
+    input, button {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 5px;
+    }
+
+    button {
+      background: red;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    a {
+      color: #ffcc00;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Welcome To Vigor Data Hub</h1>
+    <form id="login-form" autocomplete="on">
+      <fieldset>
+        <legend>Login</legend>
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" required><br><br>
+
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required><br><br>
+
+        <button type="submit">Login</button>
+      </fieldset>
+    </form>
+    <p>Don't have an account? <a href="signup.html">Sign up</a></p>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      const loginForm = document.getElementById("login-form");
+
+      if (!loginForm) {
+        console.error("Error: Login form not found.");
+        return;
+      }
+
       loginForm.addEventListener("submit", async function (event) {
         event.preventDefault();
 
@@ -24,15 +88,14 @@
           alert(data.message);
 
           if (response.ok) {
-            window.location.href = data.redirectUrl; // Redirect to dashboard.html
+            window.location.href = data.redirectUrl;
           }
         } catch (error) {
           console.error("Error:", error);
           alert("Login failed. Please try again.");
         }
       });
-    } else {
-      console.error("Error: Login form not found.");
-    }
-  });
-</script>
+    });
+  </script>
+</body>
+</html>

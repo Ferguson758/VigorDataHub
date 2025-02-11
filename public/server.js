@@ -28,80 +28,13 @@ app.use(cors({
     allowedHeaders: "Content-Type,Authorization"
 }));
 
-// ✅ Serve Static Files
+// ✅ **Ensure Static Files Are Served Correctly**
 app.use(express.static(path.join(__dirname, 'public')));
+console.log("✅ Static files are being served from:", path.join(__dirname, 'public'));
 
-// ✅ Ensure Required Environment Variables Exist
-if (!process.env.MONGO_URI || !process.env.EMAIL_USER || !process.env.EMAIL_PASS || !process.env.JWT_SECRET) {
-    console.error("❌ Missing required environment variables. Check your .env file.");
-    process.exit(1);
-}
-
-// ✅ MongoDB Connection
-mongoose.connect(process.env.MONGO_URI)
-    .then(() => console.log("✅ MongoDB Connected Successfully"))
-    .catch(err => {
-        console.error("❌ MongoDB Connection Error:", err.message);
-        process.exit(1);
-    });
-
-// ✅ User Schema
-const UserSchema = new mongoose.Schema({
-    email: { type: String, unique: true, required: true },
-    password: { type: String, required: true },
-    fullName: { type: String, required: true },
-    authCode: { type: String },
-    authCodeExpiry: { type: Date },
-});
-
-const User = mongoose.model('User', UserSchema);
-
-// ✅ Nodemailer Transporter
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-});
-
-// ✅ Serve the Homepage
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-// ✅ **Signup Route (Now Sends Verification Code)**
-app.post('/signup', async (req, res) => {
-    try {
-        const { email, password, fullName } = req.body;
-        if (!email || !password || !fullName) return res.status(400).json({ message: 'All fields are required' });
-
-        const existingUser = await User.findOne({ email });
-        if (existingUser) return res.status(400).json({ message: 'Email already registered' });
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const authCode = crypto.randomInt(100000, 999999).toString();
-        const expiry = moment().add(15, 'minutes').toDate();
-
-        const newUser = new User({ email, password: hashedPassword, fullName, authCode, authCodeExpiry: expiry });
-        await newUser.save();
-
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: email,
-            subject: 'Your Verification Code',
-            text: `Your verification code is: ${authCode}. It expires in 15 minutes.`,
-        };
-
-        transporter.sendMail(mailOptions, (error) => {
-            if (error) return res.status(500).json({ message: 'Error sending verification code' });
-            res.status(201).json({ message: 'Account created successfully! Check your email for the verification code.' });
-        });
-
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
+// ✅ Serve Homepage (Fix for Missing UI)
+app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 // ✅ **Login Route (Now Redirects Correctly)**
@@ -117,19 +50,19 @@ app.post('/login', async (req, res) => {
 
         const token = jwt.sign({ email: user.email }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-        res.status(200).json({ message: 'Login successful', token, redirectUrl: "dashboard.html" });
+        res.status(200).json({ message: 'Login successful', token, redirectUrl: "/dashboard.html" });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal server error' });
     }
 });
 
-// ✅ 404 Handler
+// ✅ **Fix 404 Errors**
 app.use((req, res) => {
     res.status(404).json({ message: 'Route not found' });
 });
 
-// ✅ Start Server
+// ✅ **Start Server**
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
