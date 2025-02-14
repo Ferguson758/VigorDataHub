@@ -1,4 +1,4 @@
-// Load Environment Variables
+// ✅ Load Environment Variables
 require('dotenv').config({ path: __dirname + '/.env' });
 
 const express = require('express');
@@ -34,12 +34,21 @@ app.use(cors({
     allowedHeaders: "Content-Type,Authorization"
 }));
 
-
 app.use(cors({
     origin: allowedOrigins,
     methods: "GET,POST,PUT,DELETE",
     allowedHeaders: "Content-Type,Authorization"
 }));
+
+// ✅ **MongoDB Connection**
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://fergusonemmanuel758:tP0NyuP7HVrAZC5e@vigordatacluster.5rvhu.mongodb.net/VigorDataHub?retryWrites=true&w=majority";
+
+mongoose.connect(MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+})
+.then(() => console.log("✅ Connected to MongoDB"))
+.catch(err => console.error("❌ MongoDB Connection Error:", err));
 
 // ✅ **Ensure Static Files Are Served Correctly**
 app.use(express.static(path.join(__dirname, 'public')));
@@ -50,7 +59,7 @@ app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
-// ✅ **Login Route (Now Redirects Correctly)**
+// ✅ **Login Route**
 app.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
